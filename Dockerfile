@@ -1,7 +1,12 @@
-FROM alpine:3.9
+FROM alpine:3.11
 
-# tinytex dependencies
-RUN apk --no-cache add \
+ENV PLANTUML_VERSION 1.2019.8
+ENV PLANTUML_DOWNLOAD_URL https://sourceforge.net/projects/plantuml/files/plantuml.$PLANTUML_VERSION.jar/download
+
+RUN apk --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community add \
+  openjdk11-jre \
+  ca-certificates \
+  graphviz \
   perl  \
   wget \
   xz \
@@ -11,23 +16,32 @@ RUN apk --no-cache add \
   lua \
   gcc
 
-# add user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN wget -O /tmp/pandoc.tar.gz https://github.com/jgm/pandoc/releases/download/2.9.1.1/pandoc-2.9.1.1-linux-amd64.tar.gz \
+  && tar xvzf /tmp/pandoc.tar.gz --strip-components 1 -C /usr/local/ \
+  && update-ca-certificates \
+  && rm /tmp/pandoc.tar.gz
 
-# install as appuser
-USER appuser
+RUN wget "$PLANTUML_DOWNLOAD_URL" -O /usr/local/plantuml.jar && \
+  chmod a+r /usr/local/plantuml.jar 
+
+COPY plantuml /usr/local/bin/
+COPY pandoc-default /usr/local/bin/
+COPY pandoc /root
+
+# install as root
+USER root
 
 # setup workdir
-WORKDIR /home/appuser
+WORKDIR /root
 
 # setup path
-ENV PATH=/home/appuser/.TinyTeX/bin/x86_64-linuxmusl/:$PATH
+ENV PATH=/root/.TinyTeX/bin/x86_64-linuxmusl/:$PATH
 
 # download and install tinytex
 RUN wget -qO- "https://yihui.name/gh/tinytex/tools/install-unx.sh" | sh
 
 # add tlmgr to path
-RUN /home/appuser/.TinyTeX/bin/*/tlmgr path add
+RUN /root/.TinyTeX/bin/*/tlmgr path add
 
 # verify latex version
 RUN latex --version
@@ -39,49 +53,60 @@ RUN tlmgr --version
 RUN tlmgr install \
     preview \
     standalone \
-    dvisvgm
+    dvisvgm \
+    xetex \
+    unicode-math \
+    filehook \
+    xecjk \
+    arphic-ttf \
+    arphic \
+    lm-math \
+    wrapfig \
+    ulem \
+    amsmath \
+    capt-of \
+    hyperref \
+    ctex \
+    zhnumber \
+    minted \
+    titlesec \
+    fvextra \
+    lineno \
+    ifplatform \
+    xstring \
+    tcolorbox \
+    environ \
+    trimspaces \
+    fandol \
+    placeins \
+    colortbl \
+    tabu \
+    multirow \
+    adjustbox  \
+    varwidth \
+    collectbox \
+    wasysym \
+    xcolor \
+    courier \
+    sectsty \
+    tocloft  \
+    courier \
+    helvetic \
+    listings  
 
-# verify 
-RUN dvisvgm --version
-
-# setup test
-RUN mkdir /tmp/test
-
-# test workdir
-WORKDIR /tmp/test
+RUN tlmgr install \
+    parskip \
+    pgf \
+    tikz-cd
 
 # copy test latex standalone equation
-COPY ./test.tex .
+RUN wget -O /tmp/dotfonts.zip https://github.com/muzili/dotfonts/archive/master.zip && \
+    unzip /tmp/dotfonts.zip -d /root && \
+    rm -rf /root/.fonts && \
+    mv /root/dotfonts-master /root/.fonts
 
 # temp assign root to clean up tlmgr only dependencies
 USER root
 
-# remove dependencies
-RUN apk del wget xz tar
-
-# reset user
-USER appuser
-
-# run latex - ignore latex errors
-RUN latex -interaction=nonstopmode  ./test.tex || true
-
-# run dvisvgm with no-fonts
-RUN dvisvgm --no-fonts ./test.dvi
-
-# verify no-font svg was generated
-RUN test -f test.svg
-
-# remove no-font svg
-RUN rm test.svg
-
-# run dvisvgm with ttf font
-RUN dvisvgm --font-format=ttf ./test.dvi
-
-# verify ttf font svg was generated
-RUN test -f test.svg
-
-# clean up tests
-RUN rm -R /tmp/*
-
 # reset workdir
-WORKDIR /home/appuser
+WORKDIR /root

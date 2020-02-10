@@ -1,0 +1,2 @@
+#!/bin/sh
+pandoc --template=/root/default.tex -N --toc --pdf-engine=xelatex -V documentclass=ctexart -V papersize=A4 $*
