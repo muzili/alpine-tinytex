@@ -101,7 +101,6 @@ RUN tlmgr install \
     listings  
 
 RUN tlmgr install \
-    collection-genericrecommended \
     collection-latexrecommended \
     collection-latexextra \
     collection-bibtexextra \
