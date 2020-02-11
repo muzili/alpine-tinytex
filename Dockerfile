@@ -105,6 +105,7 @@ RUN tlmgr install \
     collection-latexrecommended \
     collection-latexextra \
     collection-bibtexextra \
+    mdwtools \
     parskip \
     pgf \
     tikz-cd
