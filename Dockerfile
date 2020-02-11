@@ -24,6 +24,12 @@ RUN wget -O /tmp/pandoc.tar.gz https://github.com/jgm/pandoc/releases/download/2
 RUN wget "$PLANTUML_DOWNLOAD_URL" -O /usr/local/plantuml.jar && \
   chmod a+r /usr/local/plantuml.jar 
 
+# copy test latex standalone equation
+RUN wget -O /tmp/dotfonts.zip https://github.com/muzili/dotfonts/archive/master.zip && \
+    unzip /tmp/dotfonts.zip -d /root && \
+    rm -rf /root/.fonts && \
+    mv /root/dotfonts-master /root/.fonts
+
 COPY plantuml /usr/local/bin/
 COPY pandoc-default /usr/local/bin/
 COPY pandoc /root
@@ -95,15 +101,13 @@ RUN tlmgr install \
     listings  
 
 RUN tlmgr install \
+    collection-genericrecommended \
+    collection-latexrecommended \
+    collection-latexextra \
+    collection-bibtexextra \
     parskip \
     pgf \
     tikz-cd
-
-# copy test latex standalone equation
-RUN wget -O /tmp/dotfonts.zip https://github.com/muzili/dotfonts/archive/master.zip && \
-    unzip /tmp/dotfonts.zip -d /root && \
-    rm -rf /root/.fonts && \
-    mv /root/dotfonts-master /root/.fonts
 
 # temp assign root to clean up tlmgr only dependencies
 USER root
