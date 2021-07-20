@@ -1,14 +1,17 @@
-FROM alpine:3.11
+FROM alpine:3.14
 
-ENV PLANTUML_VERSION 1.2019.8
+ENV PLANTUML_VERSION 1.2021.8
 ENV PLANTUML_DOWNLOAD_URL https://sourceforge.net/projects/plantuml/files/plantuml.$PLANTUML_VERSION.jar/download
 
-RUN apk --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community add \
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
+  apk --no-cache --repository=http://mirrors.tuna.tsinghua.edu.cn/alpine/edge/community add \
   openjdk11-jre \
   ca-certificates \
   graphviz \
   perl  \
+  git  \
   wget \
+  aria2 \
   xz \
   tar \
   fontconfig \
@@ -16,19 +19,20 @@ RUN apk --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/commun
   lua \
   gcc
 
-RUN wget -O /tmp/pandoc.tar.gz https://github.com/jgm/pandoc/releases/download/2.9.1.1/pandoc-2.9.1.1-linux-amd64.tar.gz \
-  && tar xvzf /tmp/pandoc.tar.gz --strip-components 1 -C /usr/local/ \
-  && update-ca-certificates \
-  && rm /tmp/pandoc.tar.gz
+ENV PANDOC_VERSION 2.14.1
+RUN aria2c -d /tmp https://github.com/jgm/pandoc/releases/download/$PANDOC_VERSION/pandoc-$PANDOC_VERSION-linux-amd64.tar.gz  && \
+  tar xvzf /tmp/pandoc-$PANDOC_VERSION-linux-amd64.tar.gz --strip-components 1 -C /usr/local/  && \
+  update-ca-certificates  && \
+  rm -fr /tmp/pandoc-2.14.1-linux-amd64.tar.gz
 
-RUN wget "$PLANTUML_DOWNLOAD_URL" -O /usr/local/plantuml.jar && \
-  chmod a+r /usr/local/plantuml.jar 
+RUN aria2c "$PLANTUML_DOWNLOAD_URL" -d /tmp && \
+  mv -f /tmp/plantuml.$PLANTUML_VERSION.jar /usr/local/plantuml.jar && \
+  chmod a+r /usr/local/plantuml.jar
 
 # copy test latex standalone equation
-RUN wget -O /tmp/dotfonts.zip https://github.com/muzili/dotfonts/archive/master.zip && \
-    unzip /tmp/dotfonts.zip -d /root && \
-    rm -rf /root/.fonts && \
-    mv /root/dotfonts-master /root/.fonts
+RUN rm -rf /root/.fonts && \
+    git clone --depth 1 --no-tags https://gitee.com/lzgcc/dotfonts.git  ~/.fonts  && \
+    rm -rf /root/.fonts/.git
 
 COPY plantuml /usr/local/bin/
 COPY pandoc-default /usr/local/bin/
@@ -41,13 +45,16 @@ USER root
 WORKDIR /root
 
 # setup path
-ENV PATH=/root/.TinyTeX/bin/x86_64-linuxmusl/:$PATH
+ENV PATH=/root/.TinyTeX/bin/x86_64-linuxmusl/:$HOME/bin:$PATH
 
 # download and install tinytex
 RUN wget -qO- "https://yihui.name/gh/tinytex/tools/install-unx.sh" | sh
 
 # add tlmgr to path
-RUN /root/.TinyTeX/bin/*/tlmgr path add
+RUN tlmgr option repository https://mirrors.tuna.tsinghua.edu.cn/CTAN/systems/texlive/tlnet && \
+    tlmgr update --self --all && \
+    tlmgr path add && \
+    fmtutil-sys --all
 
 # verify latex version
 RUN latex --version
@@ -98,7 +105,7 @@ RUN tlmgr install \
     tocloft  \
     courier \
     helvetic \
-    listings  
+    listings
 
 RUN tlmgr install \
     collection-latexrecommended \
@@ -108,6 +115,8 @@ RUN tlmgr install \
     parskip \
     pgf \
     tikz-cd
+
+RUN cd $HOME/bin && ls $HOME/.TinyTeX/bin/x86_64-*/* | xargs -n 1 ln -s -f
 
 # temp assign root to clean up tlmgr only dependencies
 USER root
