@@ -1,6 +1,6 @@
-FROM alpine:3.14
+FROM alpine:3.14.2
 
-ENV PLANTUML_VERSION 1.2021.8
+ENV PLANTUML_VERSION 1.2021.12
 ENV PLANTUML_DOWNLOAD_URL https://sourceforge.net/projects/plantuml/files/plantuml.$PLANTUML_VERSION.jar/download
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
@@ -19,7 +19,7 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
   lua \
   gcc
 
-ENV PANDOC_VERSION 2.14.1
+ENV PANDOC_VERSION 2.14.2
 RUN aria2c -d /tmp https://github.com/jgm/pandoc/releases/download/$PANDOC_VERSION/pandoc-$PANDOC_VERSION-linux-amd64.tar.gz  && \
   tar xvzf /tmp/pandoc-$PANDOC_VERSION-linux-amd64.tar.gz --strip-components 1 -C /usr/local/  && \
   update-ca-certificates  && \
